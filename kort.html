@@ -5,34 +5,27 @@
   ║                                                              ║
   ║  SÅDAN KOMMER DET PÅ DIN IPHONE (via GitHub Pages):         ║
   ║                                                              ║
-  ║  1. Gå til github.com → opret gratis konto (eller log ind)  ║
-  ║  2. Klik "+" øverst → "New repository"                      ║
-  ║     Navn: mit-kort   →  "Create repository"                 ║
-  ║  3. Klik "Add file" → "Upload files"                        ║
+  ║  1. Gå til github.com → log ind på GeoGearloes              ║
+  ║  2. Gå til repository "Mit_kort"                            ║
+  ║  3. Klik kort.html → de tre prikker (...) → Delete file     ║
+  ║     → Commit changes                                        ║
+  ║  4. Klik "Add file" → "Upload files"                        ║
   ║     Træk denne fil (kort.html) ind → "Commit changes"       ║
-  ║  4. Gå til Settings → Pages                                 ║
-  ║     Under "Source": vælg "Deploy from a branch"             ║
-  ║     Branch: main  /  (root)  → Save                         ║
-  ║  5. Vent ~1 minut. Din URL bliver:                          ║
-  ║     https://DITBRUGERNAVN.github.io/mit-kort/kort.html      ║
-  ║  6. Åbn URL i Safari på iPhone                              ║
-  ║     Del-ikon (firkant med pil) → "Føj til hjemmeskærm"      ║
-  ║     → Kortet er nu en app på din hjemmeskærm!               ║
+  ║  5. Vent ~1 minut og åbn:                                   ║
+  ║     https://geogearloes.github.io/Mit_kort/kort.html        ║
+  ║  6. Safari på iPhone → Del-ikon → "Føj til hjemmeskærm"     ║
   ╚══════════════════════════════════════════════════════════════╝
 -->
 <html lang="da">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
-  <!-- iPhone "Føj til hjemmeskærm" indstillinger -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Kortet">
-
   <title>Pergament Kort</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
 
@@ -46,7 +39,6 @@
       overflow: hidden;
     }
 
-    /* Ydre ramme */
     #frame {
       position: absolute;
       inset: 8px;
@@ -56,23 +48,9 @@
       box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 25px rgba(0,0,0,0.9);
     }
 
-    /* Selve kortfladen */
     #map {
       width: 100%;
       height: 100%;
-      background: #e8d8a0;
-    }
-
-    /* Pergament-filter på kortfladerne (tiles) */
-    .leaflet-tile-pane {
-      filter: sepia(0.88) hue-rotate(356deg) brightness(0.86) contrast(1.06) saturate(0.72);
-    }
-
-    /* Overlejringer (markører, popups) uden filter */
-    .leaflet-overlay-pane,
-    .leaflet-marker-pane,
-    .leaflet-popup-pane {
-      filter: none;
     }
 
     /* Hjørneornamenter */
@@ -80,23 +58,23 @@
       position: absolute;
       width: 48px;
       height: 48px;
-      z-index: 1000;
+      z-index: 10;
       pointer-events: none;
       opacity: 0.85;
     }
-    .ornament-tl { top: 2px;  left: 2px;  }
-    .ornament-tr { top: 2px;  right: 2px; transform: scaleX(-1); }
-    .ornament-bl { bottom: 2px; left: 2px;  transform: scaleY(-1); }
-    .ornament-br { bottom: 2px; right: 2px; transform: scale(-1,-1); }
+    .ornament-tl { top: 2px;    left: 2px;   }
+    .ornament-tr { top: 2px;    right: 2px;  transform: scaleX(-1); }
+    .ornament-bl { bottom: 2px; left: 2px;   transform: scaleY(-1); }
+    .ornament-br { bottom: 2px; right: 2px;  transform: scale(-1,-1); }
 
-    /* Titel-banner */
+    /* Titel */
     #title {
       position: absolute;
       top: 10px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 1000;
-      background: rgba(240, 225, 178, 0.93);
+      z-index: 10;
+      background: rgba(240,225,178,0.93);
       border: 2px solid #6b3d1e;
       padding: 4px 22px 3px;
       color: #2e1206;
@@ -113,10 +91,10 @@
       position: absolute;
       bottom: 26px;
       right: 14px;
-      z-index: 1000;
+      z-index: 10;
       width: 58px;
       height: 58px;
-      background: rgba(240, 225, 178, 0.96);
+      background: rgba(240,225,178,0.96);
       border: 3px solid #6b3d1e;
       border-radius: 50%;
       cursor: pointer;
@@ -129,17 +107,14 @@
       -webkit-tap-highlight-color: transparent;
       user-select: none;
     }
-    #gps-btn:active {
-      transform: scale(0.9);
-      box-shadow: 0 1px 6px rgba(0,0,0,0.4);
-    }
+    #gps-btn:active { transform: scale(0.9); }
     #gps-btn.searching {
       animation: compass-pulse 1.4s ease-in-out infinite;
     }
     @keyframes compass-pulse {
-      0%   { box-shadow: 0 0 0 0   rgba(107,61,30,0.65); }
-      60%  { box-shadow: 0 0 0 14px rgba(107,61,30,0);   }
-      100% { box-shadow: 0 0 0 0   rgba(107,61,30,0);    }
+      0%   { box-shadow: 0 0 0 0    rgba(107,61,30,0.65); }
+      60%  { box-shadow: 0 0 0 14px rgba(107,61,30,0);    }
+      100% { box-shadow: 0 0 0 0    rgba(107,61,30,0);    }
     }
 
     /* Statusbesked */
@@ -147,8 +122,8 @@
       position: absolute;
       bottom: 96px;
       right: 10px;
-      z-index: 1000;
-      background: rgba(240, 225, 178, 0.94);
+      z-index: 10;
+      background: rgba(240,225,178,0.94);
       border: 1px solid #6b3d1e;
       padding: 5px 12px;
       color: #2e1206;
@@ -161,31 +136,30 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.25);
     }
 
-    /* Leaflet kontroller i vintage-stil */
-    .leaflet-control-zoom {
+    /* MapLibre kontroller */
+    .maplibregl-ctrl-group {
       border: 2px solid #6b3d1e !important;
-      overflow: hidden;
+      border-radius: 0 !important;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
+      overflow: hidden;
     }
-    .leaflet-control-zoom a {
-      background: rgba(240,225,178,0.95) !important;
-      color: #2e1206 !important;
-      border-color: #6b3d1e !important;
-      font-family: 'Cinzel', serif !important;
-      font-size: 18px !important;
-      font-weight: 700 !important;
-      line-height: 26px !important;
+    .maplibregl-ctrl-group button {
+      background-color: rgba(240,225,178,0.95) !important;
+      border-bottom-color: #6b3d1e !important;
     }
-    .leaflet-control-zoom a:hover {
-      background: rgba(220,202,148,0.98) !important;
+    .maplibregl-ctrl-group button:hover {
+      background-color: rgba(220,202,148,0.98) !important;
     }
-    .leaflet-control-attribution {
+    .maplibregl-ctrl-group button span {
+      filter: invert(20%) sepia(40%) saturate(600%) hue-rotate(340deg);
+    }
+    .maplibregl-ctrl-attrib {
       background: rgba(240,225,178,0.82) !important;
       color: #6b3d1e !important;
       font-size: 9px !important;
     }
-    .leaflet-control-attribution a { color: #6b3d1e !important; }
-    .leaflet-control-scale-line {
+    .maplibregl-ctrl-attrib a { color: #6b3d1e !important; }
+    .maplibregl-ctrl-scale {
       background: rgba(240,225,178,0.85) !important;
       border-color: #6b3d1e !important;
       color: #2e1206 !important;
@@ -193,24 +167,25 @@
       font-size: 9px !important;
     }
 
-    /* Popup-styling */
-    .leaflet-popup-content-wrapper {
+    /* Popup */
+    .maplibregl-popup-content {
       background: rgba(240,225,178,0.97) !important;
       border: 2px solid #6b3d1e !important;
       border-radius: 4px !important;
-      color: #2e1206 !important;
-      font-family: 'Cinzel', serif !important;
       box-shadow: 0 3px 12px rgba(0,0,0,0.4) !important;
+      padding: 10px 14px !important;
     }
-    .leaflet-popup-tip { background: rgba(240,225,178,0.97) !important; }
-    .leaflet-popup-close-button { color: #6b3d1e !important; font-size: 16px !important; }
+    .maplibregl-popup-close-button {
+      color: #6b3d1e !important;
+      font-size: 16px !important;
+    }
+    .maplibregl-popup-tip { border-top-color: rgba(240,225,178,0.97) !important; }
   </style>
 </head>
 <body>
 
 <div id="frame">
 
-  <!-- Hjørneornamenter -->
   <svg class="ornament ornament-tl" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
     <path d="M4 4 L4 26 M4 4 L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
     <path d="M4 4 L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
@@ -244,116 +219,269 @@
     <path d="M4 4 Q10 4 14 14 Q4 10 4 4Z" fill="#6b3d1e" fill-opacity="0.15"/>
   </svg>
 
-  <!-- Titel -->
   <div id="title">&#x2E1C; Terrarum &#x2E1C;</div>
-
-  <!-- Kortfladen -->
   <div id="map"></div>
-
-  <!-- GPS-knap -->
   <div id="gps-btn" onclick="findMe()" title="Find min position">&#x1F9ED;</div>
-
-  <!-- Statusbesked -->
   <div id="status"></div>
 
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.js"></script>
 <script>
-// ──────────────────────────────────────────────
-// Kortopsætning
-// ──────────────────────────────────────────────
-const map = L.map('map', {
-  zoomControl: true,
+// ── Farvepalette ───────────────────────────────────────────────
+const C = {
+  parchment: '#f2e6be',   // baggrund og land
+  water:     '#6b9ec4',   // hav, søer, vandløb
+  forest:    '#7a9e5a',   // skov og træer
+  building:  '#5c3317',   // bygninger (mørk brun)
+  road:      '#f8f0d8',   // veje (meget lys beige)
+  text:      '#2e1206',   // stednavne og vejnavne
+  halo:      '#f2e6be',   // tekst-halo (som baggrund)
+};
+
+// ── Custom kortstil ────────────────────────────────────────────
+const kortStil = {
+  version: 8,
+  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  sources: {
+    ofm: {
+      type: 'vector',
+      url: 'https://tiles.openfreemap.org/planet',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }
+  },
+  layers: [
+
+    // 1. Baggrund — pergament
+    { id: 'bg', type: 'background',
+      paint: { 'background-color': C.parchment } },
+
+    // 2. Vand (søer, hav)
+    { id: 'water', type: 'fill',
+      source: 'ofm', 'source-layer': 'water',
+      paint: { 'fill-color': C.water, 'fill-opacity': 0.9 } },
+
+    // 3. Vandløb (floder, åer)
+    { id: 'waterway', type: 'line',
+      source: 'ofm', 'source-layer': 'waterway',
+      paint: {
+        'line-color': C.water,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 2.5]
+      } },
+
+    // 4. Skov — grøn
+    { id: 'landcover-wood', type: 'fill',
+      source: 'ofm', 'source-layer': 'landcover',
+      filter: ['match', ['get', 'class'], ['wood', 'tree', 'forest'], true, false],
+      paint: { 'fill-color': C.forest, 'fill-opacity': 0.75 } },
+
+    // 5. Landuse skov (ekstra dækning)
+    { id: 'landuse-forest', type: 'fill',
+      source: 'ofm', 'source-layer': 'landuse',
+      filter: ['match', ['get', 'class'], ['wood', 'forest'], true, false],
+      paint: { 'fill-color': C.forest, 'fill-opacity': 0.72 } },
+
+    // 6. Veje — meget lys beige, størrelsesordnet mindst → størst
+    { id: 'road-path', type: 'line',
+      source: 'ofm', 'source-layer': 'transportation',
+      filter: ['match', ['get', 'class'], ['path', 'track', 'footway'], true, false],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': C.road,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 18, 2],
+        'line-dasharray': [2, 2]
+      } },
+
+    { id: 'road-minor', type: 'line',
+      source: 'ofm', 'source-layer': 'transportation',
+      filter: ['match', ['get', 'class'], ['minor', 'service'], true, false],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': C.road,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 18, 5]
+      } },
+
+    { id: 'road-secondary', type: 'line',
+      source: 'ofm', 'source-layer': 'transportation',
+      filter: ['match', ['get', 'class'], ['secondary', 'tertiary'], true, false],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': C.road,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 16, 7]
+      } },
+
+    { id: 'road-primary', type: 'line',
+      source: 'ofm', 'source-layer': 'transportation',
+      filter: ['match', ['get', 'class'], ['primary', 'trunk', 'motorway'], true, false],
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': C.road,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 16, 10]
+      } },
+
+    // 7. Bygninger — 3D ekstrudering (mørk brun)
+    { id: 'building-3d', type: 'fill-extrusion',
+      source: 'ofm', 'source-layer': 'building',
+      minzoom: 13,
+      paint: {
+        'fill-extrusion-color': C.building,
+        'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 5],
+        'fill-extrusion-base':   ['coalesce', ['get', 'render_min_height'], 0],
+        'fill-extrusion-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 15, 0.88]
+      } },
+
+    // 8. Vejnavne langs vejene
+    { id: 'road-name', type: 'symbol',
+      source: 'ofm', 'source-layer': 'transportation_name',
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 12, 9, 17, 12],
+        'symbol-placement': 'line',
+        'text-max-angle': 30,
+        'text-padding': 2
+      },
+      paint: {
+        'text-color': C.text,
+        'text-halo-color': C.halo,
+        'text-halo-width': 1.5
+      } },
+
+    // 9. Stednavne — lille (landsby, bydel)
+    { id: 'place-small', type: 'symbol',
+      source: 'ofm', 'source-layer': 'place',
+      filter: ['match', ['get', 'class'],
+        ['village', 'hamlet', 'suburb', 'neighbourhood', 'isolated_dwelling'], true, false],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Regular'],
+        'text-size': 10,
+        'text-max-width': 8
+      },
+      paint: {
+        'text-color': C.text,
+        'text-halo-color': C.halo,
+        'text-halo-width': 1.5
+      } },
+
+    // 10. By
+    { id: 'place-town', type: 'symbol',
+      source: 'ofm', 'source-layer': 'place',
+      filter: ['match', ['get', 'class'], ['town'], true, false],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 12,
+        'text-max-width': 8
+      },
+      paint: {
+        'text-color': C.text,
+        'text-halo-color': C.halo,
+        'text-halo-width': 2
+      } },
+
+    // 11. Større by
+    { id: 'place-city', type: 'symbol',
+      source: 'ofm', 'source-layer': 'place',
+      filter: ['match', ['get', 'class'], ['city'], true, false],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 12, 10, 18],
+        'text-max-width': 8
+      },
+      paint: {
+        'text-color': C.text,
+        'text-halo-color': C.halo,
+        'text-halo-width': 2
+      } },
+
+    // 12. Land/region (dæmpet)
+    { id: 'place-country', type: 'symbol',
+      source: 'ofm', 'source-layer': 'place',
+      filter: ['match', ['get', 'class'], ['country', 'state', 'region'], true, false],
+      layout: {
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': 13,
+        'text-transform': 'uppercase',
+        'text-letter-spacing': 0.18,
+        'text-max-width': 8
+      },
+      paint: {
+        'text-color': C.text,
+        'text-halo-color': C.halo,
+        'text-halo-width': 2,
+        'text-opacity': 0.6
+      } }
+  ]
+};
+
+// ── Kortinitialisering ─────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'map',
+  style: kortStil,
+  center: [9.5, 56.26],
+  zoom: 7,
+  pitch: 45,
+  bearing: -15,
   attributionControl: true,
-  tap: true,
-  tapTolerance: 15,
-  zoomAnimation: true,
-}).setView([56.26, 9.5], 7);  // Standard: Danmark-overblik
-
-// OpenTopoMap — illustreret topografi-atlas stil
-// CSS-filteret ovenfor giver pergament-farvetonen
-L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-  attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a> | &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-  maxZoom: 17,
-  subdomains: 'abc',
-}).addTo(map);
-
-// Målestok nede til venstre
-L.control.scale({ imperial: false, metric: true, position: 'bottomleft' }).addTo(map);
-
-// ──────────────────────────────────────────────
-// Vintage kompasmærke (din position)
-// ──────────────────────────────────────────────
-const positionIcon = L.divIcon({
-  className: '',
-  iconSize:    [36, 36],
-  iconAnchor:  [18, 18],
-  popupAnchor: [0, -20],
-  html: `<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="18" cy="18" r="16" fill="rgba(240,225,178,0.92)" stroke="#6b3d1e" stroke-width="2.2"/>
-    <polygon points="18,3  20,16 18,13 16,16" fill="#2e1206"/>
-    <polygon points="18,33 20,20 18,23 16,20" fill="#8b6b5a"/>
-    <polygon points="3,18  16,16 13,18 16,20" fill="#8b6b5a"/>
-    <polygon points="33,18 20,16 23,18 20,20" fill="#8b6b5a"/>
-    <circle cx="18" cy="18" r="3.5" fill="#2e1206"/>
-    <text x="18" y="11.5" text-anchor="middle" font-size="5.5"
-          font-family="Georgia,serif" fill="#2e1206" font-weight="bold">N</text>
-  </svg>`
 });
 
+map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
+map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+
+// ── GPS ────────────────────────────────────────────────────────
 let posMarker = null;
-let accCircle = null;
 
-// ──────────────────────────────────────────────
-// GPS-funktion
-// ──────────────────────────────────────────────
 function findMe() {
-  if (!navigator.geolocation) {
-    showStatus('GPS ikke tilgængeligt', 4000);
-    return;
-  }
-
+  if (!navigator.geolocation) { showStatus('GPS ikke tilgængeligt', 4000); return; }
   const btn = document.getElementById('gps-btn');
   btn.classList.add('searching');
   showStatus('Søger position…', 0);
 
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
+    pos => {
       btn.classList.remove('searching');
       const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
       const accM = Math.round(acc);
 
       if (posMarker) {
-        posMarker.setLatLng([lat, lng]);
-        accCircle.setLatLng([lat, lng]).setRadius(acc);
+        posMarker.setLngLat([lng, lat]);
       } else {
-        accCircle = L.circle([lat, lng], {
-          radius:    acc,
-          color:     '#6b3d1e',
-          fillColor: 'rgba(107,61,30,0.10)',
-          weight:    1.5,
-          dashArray: '5,5',
-        }).addTo(map);
+        // Kompasrose-markør
+        const el = document.createElement('div');
+        el.style.cssText = 'width:36px;height:36px;cursor:pointer';
+        el.innerHTML = `<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="18" cy="18" r="16" fill="rgba(240,225,178,0.92)" stroke="#6b3d1e" stroke-width="2.2"/>
+          <polygon points="18,3 20,16 18,13 16,16" fill="#2e1206"/>
+          <polygon points="18,33 20,20 18,23 16,20" fill="#8b6b5a"/>
+          <polygon points="3,18 16,16 13,18 16,20" fill="#8b6b5a"/>
+          <polygon points="33,18 20,16 23,18 20,20" fill="#8b6b5a"/>
+          <circle cx="18" cy="18" r="3.5" fill="#2e1206"/>
+          <text x="18" y="11.5" text-anchor="middle" font-size="5.5"
+                font-family="Georgia,serif" fill="#2e1206" font-weight="bold">N</text>
+        </svg>`;
 
-        posMarker = L.marker([lat, lng], { icon: positionIcon })
-          .addTo(map)
-          .bindPopup(
-            `<div style="font-family:'Cinzel',serif;text-align:center;color:#2e1206;line-height:1.7">
+        posMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lng, lat])
+          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(
+            `<div style="font-family:'Cinzel',serif;text-align:center;color:#2e1206;line-height:1.8">
               <strong>Din position</strong><br>
-              <small>Nøjagtighed: ±${accM} m</small><br>
+              <small>Nøjagtighed: ±${accM} m</small><br>
               <small style="opacity:.65">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
             </div>`
-          );
+          ))
+          .addTo(map);
       }
 
-      map.setView([lat, lng], Math.max(map.getZoom(), 15));
-      showStatus(`Fundet · ±${accM} m`);
+      map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 15), duration: 1200 });
+      showStatus(`Fundet · ±${accM} m`);
       localStorage.setItem('autoLocate', '1');
     },
-    (err) => {
+    err => {
       document.getElementById('gps-btn').classList.remove('searching');
-      const msgs = { 1: 'Tilladelse nægtet', 2: 'Position ikke fundet', 3: 'Tids\u00udløb' };
+      const msgs = { 1: 'Tilladelse nægtet', 2: 'Position ikke fundet', 3: 'Tidsudløb' };
       showStatus(msgs[err.code] || 'GPS-fejl', 5000);
     },
     { enableHighAccuracy: true, timeout: 18000, maximumAge: 45000 }
@@ -368,8 +496,9 @@ function showStatus(msg, duration = 3000) {
   if (duration) el._timer = setTimeout(() => el.style.display = 'none', duration);
 }
 
-// Auto-find ved genåbning hvis tidligere tilladt
-if (localStorage.getItem('autoLocate') === '1') findMe();
+if (localStorage.getItem('autoLocate') === '1') {
+  map.once('load', findMe);
+}
 </script>
 
 </body>
