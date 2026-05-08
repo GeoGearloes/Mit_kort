@@ -1,20 +1,7 @@
 <!DOCTYPE html>
 <!--
-  ╔══════════════════════════════════════════════════════════════╗
-  ║  PERGAMENT-KORT — Fantasy/1800-tals kort med GPS            ║
-  ║                                                              ║
-  ║  SÅDAN KOMMER DET PÅ DIN IPHONE (via GitHub Pages):         ║
-  ║                                                              ║
-  ║  1. Gå til github.com → log ind på GeoGearloes              ║
-  ║  2. Gå til repository "Mit_kort"                            ║
-  ║  3. Klik kort.html → de tre prikker (...) → Delete file     ║
-  ║     → Commit changes                                        ║
-  ║  4. Klik "Add file" → "Upload files"                        ║
-  ║     Træk denne fil (kort.html) ind → "Commit changes"       ║
-  ║  5. Vent ~1 minut og åbn:                                   ║
-  ║     https://geogearloes.github.io/Mit_kort/kort.html        ║
-  ║  6. Safari på iPhone → Del-ikon → "Føj til hjemmeskærm"     ║
-  ╚══════════════════════════════════════════════════════════════╝
+  SAGNKORTET — Find og fang danske sagnvæsner
+  Upload til GitHub Pages: se kommentar i bunden af filen
 -->
 <html lang="da">
 <head>
@@ -22,484 +9,859 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Kortet">
-  <title>Pergament Kort</title>
-
+  <meta name="apple-mobile-web-app-title" content="Sagnkortet">
+  <title>Sagnkortet</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.css">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
-
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{background:#1a0a05;font-family:'Cinzel',Georgia,serif;height:100dvh;overflow:hidden}
+    .hidden{display:none!important}
 
-    body {
-      background: #2c1a0e;
-      font-family: 'Cinzel', Georgia, serif;
-      height: 100dvh;
-      overflow: hidden;
-    }
+    /* ── Kortramme ── */
+    #frame{position:absolute;inset:8px;border:3px solid #6b3d1e;border-radius:3px;overflow:hidden;
+      box-shadow:inset 0 0 40px rgba(0,0,0,.5),0 0 25px rgba(0,0,0,.9)}
+    #map{width:100%;height:100%}
+    .ornament{position:absolute;width:48px;height:48px;z-index:10;pointer-events:none;opacity:.85}
+    .ornament-tl{top:2px;left:2px}
+    .ornament-tr{top:2px;right:2px;transform:scaleX(-1)}
+    .ornament-bl{bottom:2px;left:2px;transform:scaleY(-1)}
+    .ornament-br{bottom:2px;right:2px;transform:scale(-1,-1)}
+    #title{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:10;
+      background:rgba(240,225,178,.93);border:2px solid #6b3d1e;padding:4px 18px 3px;
+      color:#2e1206;font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;
+      white-space:nowrap;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+    #gps-btn{position:absolute;bottom:26px;right:14px;z-index:10;width:54px;height:54px;
+      background:rgba(240,225,178,.96);border:3px solid #6b3d1e;border-radius:50%;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:24px;
+      box-shadow:0 3px 12px rgba(0,0,0,.45);transition:transform .12s;
+      -webkit-tap-highlight-color:transparent;user-select:none}
+    #gps-btn:active{transform:scale(.9)}
+    #gps-btn.searching{animation:pulse 1.4s ease-in-out infinite}
+    #bestiary-btn{position:absolute;bottom:26px;right:80px;z-index:10;width:54px;height:54px;
+      background:rgba(240,225,178,.96);border:3px solid #6b3d1e;border-radius:50%;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;font-size:22px;
+      box-shadow:0 3px 12px rgba(0,0,0,.45);transition:transform .12s;
+      -webkit-tap-highlight-color:transparent;user-select:none}
+    #bestiary-btn:active{transform:scale(.9)}
+    #status{position:absolute;bottom:90px;right:10px;z-index:10;background:rgba(240,225,178,.94);
+      border:1px solid #6b3d1e;padding:5px 12px;color:#2e1206;font-size:10px;letter-spacing:.6px;
+      max-width:190px;text-align:center;pointer-events:none;display:none}
 
-    #frame {
-      position: absolute;
-      inset: 8px;
-      border: 3px solid #6b3d1e;
-      border-radius: 3px;
-      overflow: hidden;
-      box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 0 25px rgba(0,0,0,0.9);
-    }
+    /* ── Nærhed-banner ── */
+    #nearby-banner{position:absolute;bottom:96px;left:50%;transform:translateX(-50%);z-index:20;
+      background:rgba(15,8,30,.92);border:2px solid var(--bc,#6b3d1e);border-radius:40px;
+      padding:10px 18px;display:flex;align-items:center;gap:12px;
+      box-shadow:0 4px 20px rgba(0,0,0,.6),0 0 20px var(--bs,rgba(107,61,30,.4));
+      animation:slideUp .4s ease;white-space:nowrap;max-width:90vw}
+    #nearby-banner .nb-icon{font-size:26px;filter:drop-shadow(0 0 6px var(--bc,#6b3d1e))}
+    #nearby-banner .nb-text{color:#f2e6be;font-size:11px;letter-spacing:.5px;line-height:1.4}
+    #nearby-banner .nb-name{font-weight:700;font-size:13px;color:var(--bc,#f2e6be)}
+    #nearby-btn{background:var(--bc,#6b3d1e);color:#f2e6be;border:none;border-radius:20px;
+      padding:7px 14px;font-family:'Cinzel',serif;font-size:11px;cursor:pointer;white-space:nowrap;
+      -webkit-tap-highlight-color:transparent}
 
-    #map {
-      width: 100%;
-      height: 100%;
-    }
+    /* ── Creature markers ── */
+    .cm{width:44px;height:52px;cursor:pointer;filter:drop-shadow(0 0 8px var(--cc));
+      animation:cfloat 3s ease-in-out infinite,cpulse 2s ease-in-out infinite}
+    .cm:hover{filter:drop-shadow(0 0 14px var(--cc));transform:scale(1.1)}
+    @keyframes cfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    @keyframes cpulse{0%,100%{opacity:1}50%{opacity:.8}}
 
-    /* Hjørneornamenter */
-    .ornament {
-      position: absolute;
-      width: 48px;
-      height: 48px;
-      z-index: 10;
-      pointer-events: none;
-      opacity: 0.85;
-    }
-    .ornament-tl { top: 2px;    left: 2px;   }
-    .ornament-tr { top: 2px;    right: 2px;  transform: scaleX(-1); }
-    .ornament-bl { bottom: 2px; left: 2px;   transform: scaleY(-1); }
-    .ornament-br { bottom: 2px; right: 2px;  transform: scale(-1,-1); }
+    /* ── Encounter overlay ── */
+    #encounter-overlay{position:fixed;inset:0;background:rgba(3,1,10,.9);z-index:100;
+      display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+    #encounter-card{width:min(360px,92vw);background:linear-gradient(170deg,#12080a 0%,#060412 100%);
+      border:2px solid #5a2a0e;border-radius:10px;padding:20px;text-align:center;
+      position:relative;box-shadow:0 0 60px rgba(0,0,0,.9),inset 0 0 40px rgba(0,0,0,.5)}
+    #ec-glow{position:absolute;inset:0;border-radius:10px;pointer-events:none;
+      background:radial-gradient(ellipse at 50% 0%,var(--eg,rgba(107,61,30,.3)) 0%,transparent 70%)}
+    #ec-art{width:130px;height:150px;margin:0 auto 8px}
+    #ec-name{font-size:20px;font-weight:700;color:var(--en,#f2e6be);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+    #ec-lore{font-size:10px;color:#a08060;line-height:1.6;margin-bottom:14px;font-family:Georgia,serif;
+      font-style:italic;min-height:40px}
+    #ec-instruction{font-size:11px;color:#c9a227;letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
+    #sigil-wrap{position:relative;width:100%;padding-top:85%;margin-bottom:12px}
+    #sigil-canvas{position:absolute;inset:0;width:100%;height:100%;
+      border-radius:6px;touch-action:none;cursor:crosshair}
+    #ec-result{font-size:14px;font-weight:700;letter-spacing:2px;min-height:22px;margin-bottom:10px}
+    #flee-btn{background:transparent;border:1px solid #4a2a10;color:#6a4a30;border-radius:20px;
+      padding:8px 24px;font-family:'Cinzel',serif;font-size:11px;cursor:pointer;
+      -webkit-tap-highlight-color:transparent}
+    #flee-btn:hover{border-color:#6b3d1e;color:#a06040}
 
-    /* Titel */
-    #title {
-      position: absolute;
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      background: rgba(240,225,178,0.93);
-      border: 2px solid #6b3d1e;
-      padding: 4px 22px 3px;
-      color: #2e1206;
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      white-space: nowrap;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.35);
-    }
+    /* ── Bestiary ── */
+    #bestiary-panel{position:fixed;inset:0;background:rgba(3,1,10,.95);z-index:100;
+      display:flex;flex-direction:column;backdrop-filter:blur(4px)}
+    #bp-header{display:flex;align-items:center;justify-content:space-between;
+      padding:20px 20px 12px;border-bottom:1px solid #3a1a08}
+    #bp-title{font-size:18px;font-weight:700;color:#f2e6be;letter-spacing:3px;text-transform:uppercase}
+    #bp-count{font-size:11px;color:#8a6040;letter-spacing:1px}
+    #bp-close{background:transparent;border:1px solid #4a2a10;color:#8a6040;
+      border-radius:20px;padding:6px 16px;font-family:'Cinzel',serif;font-size:11px;cursor:pointer}
+    #bp-scroll{flex:1;overflow-y:auto;padding:16px}
+    #bp-empty{text-align:center;color:#4a2a10;font-size:12px;margin-top:60px;line-height:2;font-style:italic}
+    .bp-section{margin-bottom:20px}
+    .bp-section-title{font-size:10px;color:#6a4a20;letter-spacing:2px;text-transform:uppercase;
+      margin-bottom:10px;padding-bottom:4px;border-bottom:1px solid #2a1206}
+    .bp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    .bp-amulet{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+    .bp-amulet-art{width:80px;height:80px;border-radius:50%;border:2px solid #6b3d1e;
+      background:#0a0508;overflow:hidden;box-shadow:0 0 12px rgba(0,0,0,.5)}
+    .bp-amulet-art canvas{width:100%;height:100%}
+    .bp-amulet-name{font-size:9px;color:#a08060;letter-spacing:1px;text-align:center}
+    .bp-amulet-count{font-size:8px;color:#4a2a10;font-style:italic}
+    .bp-amulet.locked .bp-amulet-art{border-color:#2a1206;opacity:.4}
+    .bp-amulet.locked .bp-amulet-name{color:#3a1a08}
 
-    /* GPS-knap */
-    #gps-btn {
-      position: absolute;
-      bottom: 26px;
-      right: 14px;
-      z-index: 10;
-      width: 58px;
-      height: 58px;
-      background: rgba(240,225,178,0.96);
-      border: 3px solid #6b3d1e;
-      border-radius: 50%;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.45);
-      transition: transform 0.12s, box-shadow 0.12s;
-      -webkit-tap-highlight-color: transparent;
-      user-select: none;
-    }
-    #gps-btn:active { transform: scale(0.9); }
-    #gps-btn.searching {
-      animation: compass-pulse 1.4s ease-in-out infinite;
-    }
-    @keyframes compass-pulse {
-      0%   { box-shadow: 0 0 0 0    rgba(107,61,30,0.65); }
-      60%  { box-shadow: 0 0 0 14px rgba(107,61,30,0);    }
-      100% { box-shadow: 0 0 0 0    rgba(107,61,30,0);    }
-    }
+    /* ── MapLibre controls ── */
+    .maplibregl-ctrl-group{border:2px solid #6b3d1e!important;border-radius:0!important;overflow:hidden;
+      box-shadow:0 2px 8px rgba(0,0,0,.3)!important}
+    .maplibregl-ctrl-group button{background:rgba(240,225,178,.95)!important;border-color:#6b3d1e!important}
+    .maplibregl-ctrl-group button span{filter:invert(20%) sepia(40%) saturate(600%) hue-rotate(340deg)}
+    .maplibregl-ctrl-attrib{background:rgba(240,225,178,.82)!important;color:#6b3d1e!important;font-size:9px!important}
+    .maplibregl-ctrl-attrib a{color:#6b3d1e!important}
+    .maplibregl-ctrl-scale{background:rgba(240,225,178,.85)!important;border-color:#6b3d1e!important;
+      color:#2e1206!important;font-family:'Cinzel',serif!important;font-size:9px!important}
+    .maplibregl-popup-content{background:rgba(240,225,178,.97)!important;border:2px solid #6b3d1e!important;
+      border-radius:4px!important;box-shadow:0 3px 12px rgba(0,0,0,.4)!important;padding:10px 14px!important}
+    .maplibregl-popup-close-button{color:#6b3d1e!important;font-size:16px!important}
+    .maplibregl-popup-tip{border-top-color:rgba(240,225,178,.97)!important}
 
-    /* Statusbesked */
-    #status {
-      position: absolute;
-      bottom: 96px;
-      right: 10px;
-      z-index: 10;
-      background: rgba(240,225,178,0.94);
-      border: 1px solid #6b3d1e;
-      padding: 5px 12px;
-      color: #2e1206;
-      font-size: 10px;
-      letter-spacing: 0.6px;
-      max-width: 190px;
-      text-align: center;
-      pointer-events: none;
-      display: none;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-    }
-
-    /* MapLibre kontroller */
-    .maplibregl-ctrl-group {
-      border: 2px solid #6b3d1e !important;
-      border-radius: 0 !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
-      overflow: hidden;
-    }
-    .maplibregl-ctrl-group button {
-      background-color: rgba(240,225,178,0.95) !important;
-      border-bottom-color: #6b3d1e !important;
-    }
-    .maplibregl-ctrl-group button:hover {
-      background-color: rgba(220,202,148,0.98) !important;
-    }
-    .maplibregl-ctrl-group button span {
-      filter: invert(20%) sepia(40%) saturate(600%) hue-rotate(340deg);
-    }
-    .maplibregl-ctrl-attrib {
-      background: rgba(240,225,178,0.82) !important;
-      color: #6b3d1e !important;
-      font-size: 9px !important;
-    }
-    .maplibregl-ctrl-attrib a { color: #6b3d1e !important; }
-    .maplibregl-ctrl-scale {
-      background: rgba(240,225,178,0.85) !important;
-      border-color: #6b3d1e !important;
-      color: #2e1206 !important;
-      font-family: 'Cinzel', serif !important;
-      font-size: 9px !important;
-    }
-
-    /* Popup */
-    .maplibregl-popup-content {
-      background: rgba(240,225,178,0.97) !important;
-      border: 2px solid #6b3d1e !important;
-      border-radius: 4px !important;
-      box-shadow: 0 3px 12px rgba(0,0,0,0.4) !important;
-      padding: 10px 14px !important;
-    }
-    .maplibregl-popup-close-button {
-      color: #6b3d1e !important;
-      font-size: 16px !important;
-    }
-    .maplibregl-popup-tip { border-top-color: rgba(240,225,178,0.97) !important; }
+    /* ── Animationer ── */
+    @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(107,61,30,.65)}60%{box-shadow:0 0 0 14px rgba(107,61,30,0)}100%{box-shadow:0 0 0 0 rgba(107,61,30,0)}}
+    @keyframes slideUp{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+    @keyframes bindSuccess{0%{transform:scale(1);filter:brightness(1)}40%{transform:scale(1.08);filter:brightness(1.5)}100%{transform:scale(1);filter:brightness(1)}}
+    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+    @keyframes goldGlow{0%,100%{box-shadow:0 0 0 0 rgba(201,162,39,0)}50%{box-shadow:0 0 30px 10px rgba(201,162,39,.5)}}
   </style>
 </head>
 <body>
 
+<!-- ── Kortramme ── -->
 <div id="frame">
-
   <svg class="ornament ornament-tl" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4 L4 26 M4 4 L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-    <path d="M4 4 L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
-    <circle cx="4"  cy="4"  r="2.5" fill="#6b3d1e"/>
-    <circle cx="15" cy="4"  r="1.5" fill="#6b3d1e"/>
-    <circle cx="4"  cy="15" r="1.5" fill="#6b3d1e"/>
-    <path d="M4 4 Q10 4 14 14 Q4 10 4 4Z" fill="#6b3d1e" fill-opacity="0.15"/>
+    <path d="M4 4L4 26M4 4L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M4 4L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
+    <circle cx="4" cy="4" r="2.5" fill="#6b3d1e"/><circle cx="15" cy="4" r="1.5" fill="#6b3d1e"/><circle cx="4" cy="15" r="1.5" fill="#6b3d1e"/>
   </svg>
   <svg class="ornament ornament-tr" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4 L4 26 M4 4 L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-    <path d="M4 4 L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
-    <circle cx="4"  cy="4"  r="2.5" fill="#6b3d1e"/>
-    <circle cx="15" cy="4"  r="1.5" fill="#6b3d1e"/>
-    <circle cx="4"  cy="15" r="1.5" fill="#6b3d1e"/>
-    <path d="M4 4 Q10 4 14 14 Q4 10 4 4Z" fill="#6b3d1e" fill-opacity="0.15"/>
+    <path d="M4 4L4 26M4 4L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M4 4L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
+    <circle cx="4" cy="4" r="2.5" fill="#6b3d1e"/><circle cx="15" cy="4" r="1.5" fill="#6b3d1e"/><circle cx="4" cy="15" r="1.5" fill="#6b3d1e"/>
   </svg>
   <svg class="ornament ornament-bl" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4 L4 26 M4 4 L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-    <path d="M4 4 L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
-    <circle cx="4"  cy="4"  r="2.5" fill="#6b3d1e"/>
-    <circle cx="15" cy="4"  r="1.5" fill="#6b3d1e"/>
-    <circle cx="4"  cy="15" r="1.5" fill="#6b3d1e"/>
-    <path d="M4 4 Q10 4 14 14 Q4 10 4 4Z" fill="#6b3d1e" fill-opacity="0.15"/>
+    <path d="M4 4L4 26M4 4L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M4 4L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
+    <circle cx="4" cy="4" r="2.5" fill="#6b3d1e"/><circle cx="15" cy="4" r="1.5" fill="#6b3d1e"/><circle cx="4" cy="15" r="1.5" fill="#6b3d1e"/>
   </svg>
   <svg class="ornament ornament-br" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 4 L4 26 M4 4 L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
-    <path d="M4 4 L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
-    <circle cx="4"  cy="4"  r="2.5" fill="#6b3d1e"/>
-    <circle cx="15" cy="4"  r="1.5" fill="#6b3d1e"/>
-    <circle cx="4"  cy="15" r="1.5" fill="#6b3d1e"/>
-    <path d="M4 4 Q10 4 14 14 Q4 10 4 4Z" fill="#6b3d1e" fill-opacity="0.15"/>
+    <path d="M4 4L4 26M4 4L26 4" stroke="#6b3d1e" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M4 4L14 14" stroke="#6b3d1e" stroke-width="1.5" fill="none"/>
+    <circle cx="4" cy="4" r="2.5" fill="#6b3d1e"/><circle cx="15" cy="4" r="1.5" fill="#6b3d1e"/><circle cx="4" cy="15" r="1.5" fill="#6b3d1e"/>
   </svg>
 
-  <div id="title">&#x2E1C; Terrarum &#x2E1C;</div>
+  <div id="title">&#x2E1C; Sagnkortet &#x2E1C;</div>
   <div id="map"></div>
-  <div id="gps-btn" onclick="findMe()" title="Find min position">&#x1F9ED;</div>
+  <div id="gps-btn" onclick="startTracking()" title="Find min position">&#x1F9ED;</div>
+  <div id="bestiary-btn" onclick="openBestiary()" title="Bestiarium">&#x1F4D6;</div>
   <div id="status"></div>
+</div>
 
+<!-- ── Nærhed-banner ── -->
+<div id="nearby-banner" class="hidden">
+  <span class="nb-icon" id="nb-icon"></span>
+  <div>
+    <div class="nb-name" id="nb-name"></div>
+    <div class="nb-text" id="nb-dist"></div>
+  </div>
+  <button class="nb-btn" id="nearby-btn" onclick="startEncounter()">Mød den!</button>
+</div>
+
+<!-- ── Encounter overlay ── -->
+<div id="encounter-overlay" class="hidden">
+  <div id="encounter-card">
+    <div id="ec-glow"></div>
+    <div id="ec-art"></div>
+    <div id="ec-name"></div>
+    <div id="ec-lore"></div>
+    <div id="ec-instruction">Tegn besværgelsen for at binde den!</div>
+    <div id="sigil-wrap">
+      <canvas id="sigil-canvas"></canvas>
+    </div>
+    <div id="ec-result"></div>
+    <button id="flee-btn" onclick="endEncounter(false)">Flygt</button>
+  </div>
+</div>
+
+<!-- ── Bestiarium ── -->
+<div id="bestiary-panel" class="hidden">
+  <div id="bp-header">
+    <div>
+      <div id="bp-title">Bestiarium</div>
+      <div id="bp-count"></div>
+    </div>
+    <button id="bp-close" onclick="closeBestiary()">Luk</button>
+  </div>
+  <div id="bp-scroll">
+    <div id="bp-empty">Du har endnu ikke fanget nogen sagnvæsner.<br>Gå ud og udforsk verden!</div>
+    <div id="bp-content" class="hidden"></div>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4/dist/maplibre-gl.js"></script>
 <script>
-// ── Farvepalette ───────────────────────────────────────────────
-const C = {
-  parchment: '#f2e6be',   // baggrund og land
-  water:     '#6b9ec4',   // hav, søer, vandløb
-  forest:    '#7a9e5a',   // skov og træer
-  building:  '#5c3317',   // bygninger (mørk brun)
-  road:      '#f8f0d8',   // veje (meget lys beige)
-  text:      '#2e1206',   // stednavne og vejnavne
-  halo:      '#f2e6be',   // tekst-halo (som baggrund)
+// ═══════════════════════════════════════════════════════════════
+// SAGNVÆSNER — data
+// ═══════════════════════════════════════════════════════════════
+const VAESNER = [
+  {
+    id:'nisse', navn:'Nisse', flertal:'Nisser', type:'building',
+    farve:'#c03000', glow:'rgba(192,48,0,.5)', emoji:'🏠',
+    lore:'Husets lille vogter med den røde hue. Giv ham risengrød juleaften – glem du det, vrælter det galt for kvæg og korn.',
+    sigil:{ navn:'Rundkredsen', pts:[[.5,.08],[.92,.5],[.5,.92],[.08,.5],[.5,.08]] }
+  },
+  {
+    id:'mare', navn:'Mare', flertal:'Marer', type:'building',
+    farve:'#3a00aa', glow:'rgba(58,0,170,.5)', emoji:'😴',
+    lore:'Om natten rider Maren over de sovende og trykker dem i søvnen. Hendes tunge ånd giver mareridt og sjæleangst.',
+    sigil:{ navn:'Ormegangen', pts:[[.1,.3],[.35,.72],[.5,.3],[.65,.72],[.9,.3]] }
+  },
+  {
+    id:'lygtemand', navn:'Lygtemand', flertal:'Lygtemænd', type:'water',
+    farve:'#e8a000', glow:'rgba(232,160,0,.6)', emoji:'🔥',
+    lore:'Det lokkende lys over mosen er sjælen af et ubegravet lig. Det lokker vandrere ud i dybet – følg det aldrig.',
+    sigil:{ navn:'Ildspiralens', pts:[[.5,.9],[.15,.58],[.2,.18],[.8,.18],[.85,.58],[.5,.5]] }
+  },
+  {
+    id:'aamand', navn:'Åmand', flertal:'Åmænd', type:'water',
+    farve:'#0060c0', glow:'rgba(0,96,192,.5)', emoji:'💧',
+    lore:'Den blege mand under vandoverfladen venter på de unge med sine kolde hænder. Han lokkes op med sølv og sang.',
+    sigil:{ navn:'Bølgeslangens', pts:[[.1,.5],[.3,.2],[.5,.5],[.7,.8],[.9,.5]] }
+  },
+  {
+    id:'ellepige', navn:'Ellepige', flertal:'Ellepiger', type:'forest',
+    farve:'#208020', glow:'rgba(32,128,32,.5)', emoji:'🌿',
+    lore:'Den skønne pige danser i elleskoven. Set bagfra er hun hul som et gammelt elletræ – for det er hun.',
+    sigil:{ navn:'Stjernelyset', pts:[[.5,.05],[.63,.38],[.97,.38],[.71,.6],[.83,.95],[.5,.73],[.17,.95],[.29,.6],[.03,.38],[.37,.38],[.5,.05]] }
+  },
+  {
+    id:'ellekone', navn:'Ellekone', flertal:'Ellekoner', type:'forest',
+    farve:'#7a1090', glow:'rgba(122,16,144,.5)', emoji:'👑',
+    lore:'Ellekonen hersker over de underjordiske. Hendes dans kan helbrede – eller fordærve dem der ser hende.',
+    sigil:{ navn:'Trekantens Magt', pts:[[.5,.05],[.95,.85],[.05,.85],[.5,.05]] }
+  }
+];
+
+// SVG illustrationer
+const SVG = {
+  nisse:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="50,5 28,52 72,52" fill="#c03000"/>
+    <rect x="27" y="49" width="46" height="9" rx="4" fill="#8b0000"/>
+    <circle cx="50" cy="72" r="24" fill="#f5d5a0"/>
+    <circle cx="42" cy="67" r="4" fill="#2c1206"/><circle cx="58" cy="67" r="4" fill="#2c1206"/>
+    <circle cx="43" cy="66" r="1.5" fill="white"/><circle cx="59" cy="66" r="1.5" fill="white"/>
+    <path d="M43,80 Q50,87 57,80" stroke="#8b4513" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="50" cy="96" rx="20" ry="12" fill="white"/>
+    <ellipse cx="50" cy="112" rx="22" ry="13" fill="#c03000"/>
+  </svg>`,
+
+  mare:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="mg" cx="50%" cy="35%" r="55%"><stop offset="0%" stop-color="#2a0a3e"/><stop offset="100%" stop-color="#080010"/></radialGradient></defs>
+    <path d="M20,35 Q30,5 50,15 Q70,5 80,35 Q92,65 70,85 Q60,95 50,98 Q40,95 30,85 Q8,65 20,35Z" fill="url(#mg)"/>
+    <path d="M22,40 Q8,75 14,108" stroke="#100020" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M78,40 Q92,75 86,108" stroke="#100020" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M32,38 Q18,65 24,100" stroke="#180828" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M68,38 Q82,65 76,100" stroke="#180828" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <ellipse cx="37" cy="55" rx="8" ry="6" fill="#bb0000"/>
+    <ellipse cx="63" cy="55" rx="8" ry="6" fill="#bb0000"/>
+    <ellipse cx="37" cy="55" rx="5" ry="4" fill="#ff2200"/>
+    <ellipse cx="63" cy="55" rx="5" ry="4" fill="#ff2200"/>
+    <path d="M38,74 Q50,70 62,74" stroke="#3a0020" stroke-width="2" fill="none"/>
+  </svg>`,
+
+  lygtemand:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <defs><radialGradient id="lg" cx="50%" cy="45%" r="50%"><stop offset="0%" stop-color="#fff7a0"/><stop offset="40%" stop-color="#ffaa00"/><stop offset="100%" stop-color="#ff5500" stop-opacity="0"/></radialGradient></defs>
+    <path d="M50,115 Q28,95 38,72" stroke="#ff9900" stroke-width="7" fill="none" stroke-linecap="round" opacity=".5"/>
+    <path d="M50,115 Q72,88 62,68" stroke="#ffbb00" stroke-width="5" fill="none" stroke-linecap="round" opacity=".4"/>
+    <circle cx="50" cy="50" r="40" fill="url(#lg)" opacity=".55"/>
+    <circle cx="50" cy="50" r="24" fill="#fff7a0"/>
+    <circle cx="50" cy="50" r="19" fill="#ffe040"/>
+    <circle cx="50" cy="50" r="12" fill="#fff8c0"/>
+    <circle cx="44" cy="47" r="3.5" fill="#7a5800"/>
+    <circle cx="56" cy="47" r="3.5" fill="#7a5800"/>
+    <path d="M43,57 Q50,63 57,57" stroke="#7a5800" stroke-width="2" fill="none"/>
+  </svg>`,
+
+  aamand:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <defs><linearGradient id="ag" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#b0d8f0"/><stop offset="100%" stop-color="#0a4a8a"/></linearGradient></defs>
+    <ellipse cx="50" cy="115" rx="42" ry="10" fill="#0a4a8a" opacity=".5"/>
+    <path d="M20,108 Q35,100 50,108 Q65,116 80,108" stroke="#4a9ab8" stroke-width="2.5" fill="none"/>
+    <path d="M28,112 Q28,78 32,55 Q38,28 50,24 Q62,28 68,55 Q72,78 72,112Z" fill="url(#ag)"/>
+    <circle cx="50" cy="38" r="22" fill="#c8e8f8"/>
+    <path d="M33,27 Q23,13 28,4" stroke="#2a6040" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M44,24 Q38,9 43,2" stroke="#2a6040" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M56,24 Q56,8 61,2" stroke="#2a6040" stroke-width="3" fill="none" stroke-linecap="round"/>
+    <path d="M67,27 Q74,13 70,4" stroke="#2a6040" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="42" cy="37" rx="5.5" ry="4.5" fill="#0a3068"/>
+    <ellipse cx="58" cy="37" rx="5.5" ry="4.5" fill="#0a3068"/>
+    <path d="M70,72 Q86,60 89,44" stroke="#a8d8f0" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M89,44 Q91,33 86,28" stroke="#a8d8f0" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M89,44 Q96,38 94,32" stroke="#a8d8f0" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </svg>`,
+
+  ellepige:`<svg viewBox="0 0 100 120" xmlns="http://www.w3.org/2000/svg">
+    <path d="M33,118 Q22,85 28,62 Q34,38 50,34 Q66,38 72,62 Q78,85 67,118Z" fill="#2d7030"/>
+    <ellipse cx="50" cy="80" rx="13" ry="18" fill="#162a16" opacity=".75"/>
+    <path d="M33,55 Q18,43 22,28 Q28,17 35,23" stroke="#265026" stroke-width="5" fill="none"/>
+    <path d="M28,50 Q13,40 18,22" stroke="#3a7a3a" stroke-width="3" fill="none"/>
+    <circle cx="50" cy="28" r="20" fill="#e8d5b0"/>
+    <path d="M33,17 Q40,6 45,14" stroke="#2d6028" stroke-width="3" fill="#3a8a3a"/>
+    <path d="M43,13 Q49,4 54,12" stroke="#2d6028" stroke-width="3" fill="#3a8a3a"/>
+    <path d="M52,12 Q58,5 64,15" stroke="#2d6028" stroke-width="3" fill="#3a8a3a"/>
+    <ellipse cx="43" cy="27" rx="4" ry="3.5" fill="#1a4a1a"/>
+    <ellipse cx="57" cy="27" rx="4" ry="3.5" fill="#1a4a1a"/>
+    <ellipse cx="43" cy="27" rx="2.2" ry="2.5" fill="#4aaa4a"/>
+    <ellipse cx="57" cy="27" rx="2.2" ry="2.5" fill="#4aaa4a"/>
+    <path d="M43,35 Q50,41 57,35" stroke="#8b6040" stroke-width="1.5" fill="none"/>
+  </svg>`,
+
+  ellekone:`<svg viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24,128 Q13,92 18,65 Q24,33 50,26 Q76,33 82,65 Q87,92 76,128Z" fill="#5a1a7a"/>
+    <path d="M18,78 Q4,62 8,40 Q18,24 34,37Z" fill="#245824"/>
+    <path d="M82,78 Q96,62 92,40 Q82,24 66,37Z" fill="#245824"/>
+    <circle cx="50" cy="40" r="24" fill="#d4b896"/>
+    <path d="M28,24 Q33,9 39,20" stroke="#4a2a10" stroke-width="4" fill="none"/>
+    <path d="M37,18 Q42,5 47,17" stroke="#4a2a10" stroke-width="4" fill="none"/>
+    <path d="M46,17 Q51,4 56,16" stroke="#4a2a10" stroke-width="4" fill="none"/>
+    <path d="M55,16 Q61,7 66,20" stroke="#4a2a10" stroke-width="4" fill="none"/>
+    <path d="M64,21 Q70,11 72,24" stroke="#4a2a10" stroke-width="4" fill="none"/>
+    <ellipse cx="31" cy="19" rx="5" ry="3" fill="#246024" transform="rotate(-30 31 19)"/>
+    <ellipse cx="42" cy="11" rx="5" ry="3" fill="#246024" transform="rotate(-10 42 11)"/>
+    <ellipse cx="51" cy="8" rx="5" ry="3" fill="#368036"/>
+    <ellipse cx="60" cy="11" rx="5" ry="3" fill="#246024" transform="rotate(10 60 11)"/>
+    <ellipse cx="69" cy="16" rx="5" ry="3" fill="#246024" transform="rotate(30 69 16)"/>
+    <ellipse cx="42" cy="38" rx="5.5" ry="4.5" fill="#2a0a3a"/>
+    <ellipse cx="58" cy="38" rx="5.5" ry="4.5" fill="#2a0a3a"/>
+    <ellipse cx="42" cy="38" rx="3" ry="3" fill="#9a50c8"/>
+    <ellipse cx="58" cy="38" rx="3" ry="3" fill="#9a50c8"/>
+    <path d="M40,52 Q50,57 60,52" stroke="#8b5a40" stroke-width="2" fill="none"/>
+  </svg>`
 };
 
-// ── Custom kortstil ────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// KORTSTIL
+// ═══════════════════════════════════════════════════════════════
+const C = { parchment:'#f2e6be', water:'#6b9ec4', forest:'#7a9e5a',
+            building:'#5c3317', road:'#f8f0d8', text:'#2e1206', halo:'#f2e6be' };
+
 const kortStil = {
-  version: 8,
-  glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-  sources: {
-    ofm: {
-      type: 'vector',
-      url: 'https://tiles.openfreemap.org/planet',
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }
-  },
-  layers: [
-
-    // 1. Baggrund — pergament
-    { id: 'bg', type: 'background',
-      paint: { 'background-color': C.parchment } },
-
-    // 2. Vand (søer, hav)
-    { id: 'water', type: 'fill',
-      source: 'ofm', 'source-layer': 'water',
-      paint: { 'fill-color': C.water, 'fill-opacity': 0.9 } },
-
-    // 3. Vandløb (floder, åer)
-    { id: 'waterway', type: 'line',
-      source: 'ofm', 'source-layer': 'waterway',
-      paint: {
-        'line-color': C.water,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.6, 14, 2.5]
-      } },
-
-    // 4. Skov — grøn
-    { id: 'landcover-wood', type: 'fill',
-      source: 'ofm', 'source-layer': 'landcover',
-      filter: ['match', ['get', 'class'], ['wood', 'tree', 'forest'], true, false],
-      paint: { 'fill-color': C.forest, 'fill-opacity': 0.75 } },
-
-    // 5. Landuse skov (ekstra dækning)
-    { id: 'landuse-forest', type: 'fill',
-      source: 'ofm', 'source-layer': 'landuse',
-      filter: ['match', ['get', 'class'], ['wood', 'forest'], true, false],
-      paint: { 'fill-color': C.forest, 'fill-opacity': 0.72 } },
-
-    // 6. Veje — meget lys beige, størrelsesordnet mindst → størst
-    { id: 'road-path', type: 'line',
-      source: 'ofm', 'source-layer': 'transportation',
-      filter: ['match', ['get', 'class'], ['path', 'track', 'footway'], true, false],
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': C.road,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 18, 2],
-        'line-dasharray': [2, 2]
-      } },
-
-    { id: 'road-minor', type: 'line',
-      source: 'ofm', 'source-layer': 'transportation',
-      filter: ['match', ['get', 'class'], ['minor', 'service'], true, false],
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': C.road,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 11, 0.8, 18, 5]
-      } },
-
-    { id: 'road-secondary', type: 'line',
-      source: 'ofm', 'source-layer': 'transportation',
-      filter: ['match', ['get', 'class'], ['secondary', 'tertiary'], true, false],
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': C.road,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1, 16, 7]
-      } },
-
-    { id: 'road-primary', type: 'line',
-      source: 'ofm', 'source-layer': 'transportation',
-      filter: ['match', ['get', 'class'], ['primary', 'trunk', 'motorway'], true, false],
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': C.road,
-        'line-width': ['interpolate', ['linear'], ['zoom'], 6, 1.5, 16, 10]
-      } },
-
-    // 7. Bygninger — 3D ekstrudering (mørk brun)
-    { id: 'building-3d', type: 'fill-extrusion',
-      source: 'ofm', 'source-layer': 'building',
-      minzoom: 13,
-      paint: {
-        'fill-extrusion-color': C.building,
-        'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 5],
-        'fill-extrusion-base':   ['coalesce', ['get', 'render_min_height'], 0],
-        'fill-extrusion-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0.5, 15, 0.88]
-      } },
-
-    // 8. Vejnavne langs vejene
-    { id: 'road-name', type: 'symbol',
-      source: 'ofm', 'source-layer': 'transportation_name',
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 12, 9, 17, 12],
-        'symbol-placement': 'line',
-        'text-max-angle': 30,
-        'text-padding': 2
-      },
-      paint: {
-        'text-color': C.text,
-        'text-halo-color': C.halo,
-        'text-halo-width': 1.5
-      } },
-
-    // 9. Stednavne — lille (landsby, bydel)
-    { id: 'place-small', type: 'symbol',
-      source: 'ofm', 'source-layer': 'place',
-      filter: ['match', ['get', 'class'],
-        ['village', 'hamlet', 'suburb', 'neighbourhood', 'isolated_dwelling'], true, false],
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': 10,
-        'text-max-width': 8
-      },
-      paint: {
-        'text-color': C.text,
-        'text-halo-color': C.halo,
-        'text-halo-width': 1.5
-      } },
-
-    // 10. By
-    { id: 'place-town', type: 'symbol',
-      source: 'ofm', 'source-layer': 'place',
-      filter: ['match', ['get', 'class'], ['town'], true, false],
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Bold'],
-        'text-size': 12,
-        'text-max-width': 8
-      },
-      paint: {
-        'text-color': C.text,
-        'text-halo-color': C.halo,
-        'text-halo-width': 2
-      } },
-
-    // 11. Større by
-    { id: 'place-city', type: 'symbol',
-      source: 'ofm', 'source-layer': 'place',
-      filter: ['match', ['get', 'class'], ['city'], true, false],
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Bold'],
-        'text-size': ['interpolate', ['linear'], ['zoom'], 4, 12, 10, 18],
-        'text-max-width': 8
-      },
-      paint: {
-        'text-color': C.text,
-        'text-halo-color': C.halo,
-        'text-halo-width': 2
-      } },
-
-    // 12. Land/region (dæmpet)
-    { id: 'place-country', type: 'symbol',
-      source: 'ofm', 'source-layer': 'place',
-      filter: ['match', ['get', 'class'], ['country', 'state', 'region'], true, false],
-      layout: {
-        'text-field': ['get', 'name'],
-        'text-font': ['Noto Sans Bold'],
-        'text-size': 13,
-        'text-transform': 'uppercase',
-        'text-letter-spacing': 0.18,
-        'text-max-width': 8
-      },
-      paint: {
-        'text-color': C.text,
-        'text-halo-color': C.halo,
-        'text-halo-width': 2,
-        'text-opacity': 0.6
-      } }
+  version:8,
+  glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+  sources:{ ofm:{ type:'vector', url:'https://tiles.openfreemap.org/planet',
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }},
+  layers:[
+    {id:'bg',type:'background',paint:{'background-color':C.parchment}},
+    {id:'water',type:'fill',source:'ofm','source-layer':'water',paint:{'fill-color':C.water,'fill-opacity':.9}},
+    {id:'waterway',type:'line',source:'ofm','source-layer':'waterway',
+      paint:{'line-color':C.water,'line-width':['interpolate',['linear'],['zoom'],8,.6,14,2.5]}},
+    {id:'forest',type:'fill',source:'ofm','source-layer':'landcover',
+      filter:['match',['get','class'],['wood','tree','forest'],true,false],
+      paint:{'fill-color':C.forest,'fill-opacity':.75}},
+    {id:'forest2',type:'fill',source:'ofm','source-layer':'landuse',
+      filter:['match',['get','class'],['wood','forest'],true,false],
+      paint:{'fill-color':C.forest,'fill-opacity':.72}},
+    {id:'road-path',type:'line',source:'ofm','source-layer':'transportation',
+      filter:['match',['get','class'],['path','track','footway'],true,false],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':C.road,'line-width':['interpolate',['linear'],['zoom'],13,.5,18,2],'line-dasharray':[2,2]}},
+    {id:'road-minor',type:'line',source:'ofm','source-layer':'transportation',
+      filter:['match',['get','class'],['minor','service'],true,false],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':C.road,'line-width':['interpolate',['linear'],['zoom'],11,.8,18,5]}},
+    {id:'road-sec',type:'line',source:'ofm','source-layer':'transportation',
+      filter:['match',['get','class'],['secondary','tertiary'],true,false],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':C.road,'line-width':['interpolate',['linear'],['zoom'],8,1,16,7]}},
+    {id:'road-pri',type:'line',source:'ofm','source-layer':'transportation',
+      filter:['match',['get','class'],['primary','trunk','motorway'],true,false],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':C.road,'line-width':['interpolate',['linear'],['zoom'],6,1.5,16,10]}},
+    {id:'building',type:'fill-extrusion',source:'ofm','source-layer':'building',minzoom:13,
+      paint:{'fill-extrusion-color':C.building,
+        'fill-extrusion-height':['coalesce',['get','render_height'],5],
+        'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+        'fill-extrusion-opacity':['interpolate',['linear'],['zoom'],13,.45,15,.88]}},
+    {id:'road-name',type:'symbol',source:'ofm','source-layer':'transportation_name',
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],
+        'text-size':['interpolate',['linear'],['zoom'],12,9,17,12],
+        'symbol-placement':'line','text-max-angle':30,'text-padding':2},
+      paint:{'text-color':C.text,'text-halo-color':C.halo,'text-halo-width':1.5}},
+    {id:'place-sm',type:'symbol',source:'ofm','source-layer':'place',
+      filter:['match',['get','class'],['village','hamlet','suburb','neighbourhood'],true,false],
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Regular'],'text-size':10,'text-max-width':8},
+      paint:{'text-color':C.text,'text-halo-color':C.halo,'text-halo-width':1.5}},
+    {id:'place-town',type:'symbol',source:'ofm','source-layer':'place',
+      filter:['match',['get','class'],['town'],true,false],
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],'text-size':12,'text-max-width':8},
+      paint:{'text-color':C.text,'text-halo-color':C.halo,'text-halo-width':2}},
+    {id:'place-city',type:'symbol',source:'ofm','source-layer':'place',
+      filter:['match',['get','class'],['city'],true,false],
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],
+        'text-size':['interpolate',['linear'],['zoom'],4,12,10,18],'text-max-width':8},
+      paint:{'text-color':C.text,'text-halo-color':C.halo,'text-halo-width':2}},
+    {id:'place-country',type:'symbol',source:'ofm','source-layer':'place',
+      filter:['match',['get','class'],['country','state','region'],true,false],
+      layout:{'text-field':['get','name'],'text-font':['Noto Sans Bold'],
+        'text-size':13,'text-transform':'uppercase','text-letter-spacing':.18,'text-max-width':8},
+      paint:{'text-color':C.text,'text-halo-color':C.halo,'text-halo-width':2,'text-opacity':.6}}
   ]
 };
 
-// ── Kortinitialisering ─────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// KORT
+// ═══════════════════════════════════════════════════════════════
 const map = new maplibregl.Map({
-  container: 'map',
-  style: kortStil,
-  center: [9.5, 56.26],
-  zoom: 7,
-  pitch: 45,
-  bearing: -15,
-  attributionControl: true,
+  container:'map', style:kortStil, center:[9.5,56.26],
+  zoom:7, pitch:45, bearing:-15, attributionControl:true
 });
+map.addControl(new maplibregl.NavigationControl({showCompass:true}),'top-left');
+map.addControl(new maplibregl.ScaleControl({unit:'metric'}),'bottom-left');
 
-map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-left');
-map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+// ═══════════════════════════════════════════════════════════════
+// SPILTILSTAND
+// ═══════════════════════════════════════════════════════════════
+let gs = loadState();   // game state
+let spawned = [];       // { id, vaesen, lngLat, marker }
+let nearbyTarget = null;
+let activeVaesen = null;
+let watchId = null;
+let userPos = null;
+let spawnTimer = null;
 
-// ── GPS ────────────────────────────────────────────────────────
-let posMarker = null;
+function loadState() {
+  try { return JSON.parse(localStorage.getItem('sagnkortet') || 'null') || { caught:{} }; }
+  catch { return { caught:{} }; }
+}
+function saveState() {
+  localStorage.setItem('sagnkortet', JSON.stringify(gs));
+}
 
-function findMe() {
-  if (!navigator.geolocation) { showStatus('GPS ikke tilgængeligt', 4000); return; }
+// ═══════════════════════════════════════════════════════════════
+// GPS & SPAWN
+// ═══════════════════════════════════════════════════════════════
+function startTracking() {
+  if (!navigator.geolocation) { showStatus('GPS ikke tilgængeligt',4000); return; }
   const btn = document.getElementById('gps-btn');
   btn.classList.add('searching');
-  showStatus('Søger position…', 0);
-
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      btn.classList.remove('searching');
-      const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
-      const accM = Math.round(acc);
-
-      if (posMarker) {
-        posMarker.setLngLat([lng, lat]);
-      } else {
-        // Kompasrose-markør
-        const el = document.createElement('div');
-        el.style.cssText = 'width:36px;height:36px;cursor:pointer';
-        el.innerHTML = `<svg width="36" height="36" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="18" cy="18" r="16" fill="rgba(240,225,178,0.92)" stroke="#6b3d1e" stroke-width="2.2"/>
-          <polygon points="18,3 20,16 18,13 16,16" fill="#2e1206"/>
-          <polygon points="18,33 20,20 18,23 16,20" fill="#8b6b5a"/>
-          <polygon points="3,18 16,16 13,18 16,20" fill="#8b6b5a"/>
-          <polygon points="33,18 20,16 23,18 20,20" fill="#8b6b5a"/>
-          <circle cx="18" cy="18" r="3.5" fill="#2e1206"/>
-          <text x="18" y="11.5" text-anchor="middle" font-size="5.5"
-                font-family="Georgia,serif" fill="#2e1206" font-weight="bold">N</text>
-        </svg>`;
-
-        posMarker = new maplibregl.Marker({ element: el, anchor: 'center' })
-          .setLngLat([lng, lat])
-          .setPopup(new maplibregl.Popup({ offset: 20 }).setHTML(
-            `<div style="font-family:'Cinzel',serif;text-align:center;color:#2e1206;line-height:1.8">
-              <strong>Din position</strong><br>
-              <small>Nøjagtighed: ±${accM} m</small><br>
-              <small style="opacity:.65">${lat.toFixed(5)}, ${lng.toFixed(5)}</small>
-            </div>`
-          ))
-          .addTo(map);
-      }
-
-      map.flyTo({ center: [lng, lat], zoom: Math.max(map.getZoom(), 15), duration: 1200 });
-      showStatus(`Fundet · ±${accM} m`);
-      localStorage.setItem('autoLocate', '1');
-    },
-    err => {
-      document.getElementById('gps-btn').classList.remove('searching');
-      const msgs = { 1: 'Tilladelse nægtet', 2: 'Position ikke fundet', 3: 'Tidsudløb' };
-      showStatus(msgs[err.code] || 'GPS-fejl', 5000);
-    },
-    { enableHighAccuracy: true, timeout: 18000, maximumAge: 45000 }
-  );
+  showStatus('Søger position…',0);
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+  watchId = navigator.geolocation.watchPosition(onPos, onPosErr,
+    { enableHighAccuracy:true, timeout:20000, maximumAge:10000 });
 }
 
-function showStatus(msg, duration = 3000) {
-  const el = document.getElementById('status');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(el._timer);
-  if (duration) el._timer = setTimeout(() => el.style.display = 'none', duration);
+function onPos(pos) {
+  document.getElementById('gps-btn').classList.remove('searching');
+  const { latitude:lat, longitude:lng, accuracy:acc } = pos.coords;
+  const moved = !userPos || haversine(userPos[1],userPos[0],lat,lng) > 50;
+  userPos = [lng,lat];
+
+  if (moved) {
+    map.flyTo({ center:[lng,lat], zoom:Math.max(map.getZoom(),15), pitch:50, duration:1200 });
+    showStatus(`±${Math.round(acc)} m`);
+    map.once('idle', () => spawnNearby(lng,lat));
+  }
+  checkProximity();
 }
 
-if (localStorage.getItem('autoLocate') === '1') {
-  map.once('load', findMe);
+function onPosErr(err) {
+  document.getElementById('gps-btn').classList.remove('searching');
+  const msgs={1:'Tilladelse nægtet',2:'Position ikke fundet',3:'GPS-timeout'};
+  showStatus(msgs[err.code]||'GPS-fejl',5000);
 }
+
+function spawnNearby(lng,lat) {
+  // Fjern gamle spawns
+  spawned.forEach(s => s.marker.remove());
+  spawned = [];
+
+  const pixel = map.project([lng,lat]);
+  const r = 280;
+  const bbox = [[pixel.x-r,pixel.y-r],[pixel.x+r,pixel.y+r]];
+
+  const waterFeats   = map.queryRenderedFeatures(bbox, {layers:['water','waterway']});
+  const forestFeats  = map.queryRenderedFeatures(bbox, {layers:['forest','forest2']});
+  const buildFeats   = map.queryRenderedFeatures(bbox, {layers:['building']});
+
+  const toSpawn = [];
+  if (waterFeats.length)  toSpawn.push(...pickVaesner('water',  waterFeats,  2));
+  if (forestFeats.length) toSpawn.push(...pickVaesner('forest', forestFeats, 2));
+  if (buildFeats.length)  toSpawn.push(...pickVaesner('building',buildFeats, 2));
+
+  // Tilføj mindst én tilfældig hvis ingen features
+  if (!toSpawn.length) {
+    const v = VAESNER[Math.floor(Math.random()*VAESNER.length)];
+    toSpawn.push({ vaesen:v, lngLat:[lng + rnd(.003), lat + rnd(.003)] });
+  }
+
+  toSpawn.slice(0,5).forEach(({vaesen,lngLat}) => addCreatureMarker(vaesen,lngLat));
+}
+
+function pickVaesner(type, features, count) {
+  const candidates = VAESNER.filter(v => v.type===type);
+  const result = [];
+  for (let i=0; i<count && features.length; i++) {
+    const feat = features[Math.floor(Math.random()*features.length)];
+    const pt   = featPoint(feat);
+    if (!pt) continue;
+    const v = candidates[Math.floor(Math.random()*candidates.length)];
+    result.push({ vaesen:v, lngLat:[pt[0]+rnd(.0008), pt[1]+rnd(.0008)] });
+  }
+  return result;
+}
+
+function featPoint(f) {
+  const g = f.geometry;
+  if (!g) return null;
+  if (g.type==='Point') return g.coordinates;
+  if (g.type==='LineString') return g.coordinates[Math.floor(g.coordinates.length/2)];
+  const ring = g.type==='Polygon' ? g.coordinates[0]
+             : g.type==='MultiPolygon' ? g.coordinates[0][0] : null;
+  if (!ring) return null;
+  return [ring.reduce((s,c)=>s+c[0],0)/ring.length, ring.reduce((s,c)=>s+c[1],0)/ring.length];
+}
+
+function rnd(mag) { return (Math.random()-.5)*2*mag; }
+
+function addCreatureMarker(vaesen, lngLat) {
+  const el = document.createElement('div');
+  el.className = 'cm';
+  el.style.setProperty('--cc', vaesen.farve);
+  el.innerHTML = `<svg viewBox="0 0 44 52" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="22" cy="48" rx="11" ry="4" fill="black" opacity=".35"/>
+    <circle cx="22" cy="22" r="20" fill="${vaesen.farve}" opacity=".25"/>
+    <circle cx="22" cy="22" r="16" fill="${vaesen.farve}"/>
+    <text x="22" y="28" text-anchor="middle" font-size="16" fill="white">${vaesen.emoji}</text>
+  </svg>`;
+  el.addEventListener('click', () => { activeVaesen = vaesen; showEncounterCard(vaesen); });
+
+  const marker = new maplibregl.Marker({element:el, anchor:'bottom'})
+    .setLngLat(lngLat)
+    .addTo(map);
+
+  spawned.push({ id:vaesen.id+'_'+Date.now(), vaesen, lngLat, marker });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NÆRHED
+// ═══════════════════════════════════════════════════════════════
+function checkProximity() {
+  if (!userPos || !spawned.length) return;
+  const [ulng,ulat] = userPos;
+  let closest = null, minDist = Infinity;
+  spawned.forEach(s => {
+    const d = haversine(ulat,ulng, s.lngLat[1], s.lngLat[0]);
+    if (d < 150 && d < minDist) { minDist=d; closest=s; }
+  });
+
+  const banner = document.getElementById('nearby-banner');
+  if (closest) {
+    nearbyTarget = closest.vaesen;
+    const v = closest.vaesen;
+    banner.style.setProperty('--bc', v.farve);
+    banner.style.setProperty('--bs', v.glow);
+    document.getElementById('nb-icon').textContent = v.emoji;
+    document.getElementById('nb-name').textContent = v.navn;
+    document.getElementById('nb-dist').textContent = `${Math.round(minDist)} meter borte`;
+    banner.classList.remove('hidden');
+  } else {
+    nearbyTarget = null;
+    banner.classList.add('hidden');
+  }
+}
+
+setInterval(() => { if (userPos) checkProximity(); }, 4000);
+
+function haversine(lat1,lng1,lat2,lng2) {
+  const R=6371e3, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ENCOUNTER
+// ═══════════════════════════════════════════════════════════════
+function startEncounter() {
+  if (!nearbyTarget) return;
+  showEncounterCard(nearbyTarget);
+}
+
+function showEncounterCard(vaesen) {
+  activeVaesen = vaesen;
+  const card = document.getElementById('encounter-card');
+  card.style.setProperty('--eg', vaesen.glow);
+  card.style.setProperty('--en', vaesen.farve);
+  document.getElementById('ec-art').innerHTML = SVG[vaesen.id] || '';
+  document.getElementById('ec-name').textContent = vaesen.navn;
+  document.getElementById('ec-name').style.color = vaesen.farve;
+  document.getElementById('ec-lore').textContent = vaesen.lore;
+  document.getElementById('ec-result').textContent = '';
+  document.getElementById('flee-btn').style.display = '';
+  document.getElementById('ec-instruction').textContent = `Tegn ${vaesen.sigil.navn} for at binde den!`;
+  document.getElementById('encounter-overlay').classList.remove('hidden');
+  document.getElementById('nearby-banner').classList.add('hidden');
+  setTimeout(initSigil, 100);
+}
+
+function endEncounter(caught) {
+  document.getElementById('encounter-overlay').classList.add('hidden');
+  if (caught && activeVaesen) {
+    const id = activeVaesen.id;
+    if (!gs.caught[id]) gs.caught[id] = { vaesen:activeVaesen, count:0, first: new Date().toLocaleDateString('da-DK') };
+    gs.caught[id].count++;
+    saveState();
+    // Fjern det fangede væsen fra kortet
+    spawned = spawned.filter(s => {
+      if (s.vaesen.id === id) { s.marker.remove(); return false; }
+      return true;
+    });
+    showStatus(`${activeVaesen.navn} bundet til amulet!`, 3000);
+  }
+  activeVaesen = null;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIGIL
+// ═══════════════════════════════════════════════════════════════
+let sig = { canvas:null, ctx:null, pts:[], wp:0, drawing:false, path:[] };
+
+function initSigil() {
+  const canvas = document.getElementById('sigil-canvas');
+  const wrap   = document.getElementById('sigil-wrap');
+  const size   = wrap.offsetWidth;
+  const dpr    = window.devicePixelRatio || 1;
+  canvas.width  = size * dpr;
+  canvas.height = size * 0.85 * dpr;
+  canvas.style.height = (size * 0.85) + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  sig = { canvas, ctx, pts: activeVaesen.sigil.pts, wp:0, drawing:false, path:[] };
+  drawSigil();
+
+  // Touch
+  canvas.ontouchstart  = e => { e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); onDown(t.clientX-r.left, t.clientY-r.top); };
+  canvas.ontouchmove   = e => { e.preventDefault(); const t=e.touches[0]; const r=canvas.getBoundingClientRect(); onMove(t.clientX-r.left, t.clientY-r.top); };
+  canvas.ontouchend    = e => { e.preventDefault(); onUp(); };
+  // Mouse
+  canvas.onmousedown   = e => { const r=canvas.getBoundingClientRect(); onDown(e.clientX-r.left,e.clientY-r.top); };
+  canvas.onmousemove   = e => { if(!sig.drawing)return; const r=canvas.getBoundingClientRect(); onMove(e.clientX-r.left,e.clientY-r.top); };
+  canvas.onmouseup     = onUp;
+}
+
+function drawSigil() {
+  const { canvas:cv, ctx, pts, wp } = sig;
+  const w = cv.width  / (window.devicePixelRatio||1);
+  const h = cv.height / (window.devicePixelRatio||1);
+
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#06030f';
+  ctx.fillRect(0,0,w,h);
+
+  // Tegn sigilsti (dashed gylden)
+  ctx.beginPath();
+  ctx.setLineDash([7,6]);
+  ctx.strokeStyle = 'rgba(201,162,39,.35)';
+  ctx.lineWidth = 1.5;
+  pts.forEach((p,i) => { i===0 ? ctx.moveTo(p[0]*w,p[1]*h) : ctx.lineTo(p[0]*w,p[1]*h); });
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Brugerens tegning
+  if (sig.path.length > 1) {
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff9630';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = '#ff9630';
+    ctx.shadowBlur = 7;
+    sig.path.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // Waypoints
+  pts.forEach((p,i) => {
+    const px=p[0]*w, py=p[1]*h;
+    const done = i < wp;
+    const active = i === wp;
+    const col = done ? '#ffc030' : active ? '#ff9030' : '#3a2a08';
+    const glow = done ? 'rgba(255,192,48,.8)' : active ? 'rgba(255,144,48,.9)' : 'rgba(80,60,10,.3)';
+    const gr = ctx.createRadialGradient(px,py,0,px,py,22);
+    gr.addColorStop(0,glow); gr.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(px,py,22,0,Math.PI*2); ctx.fillStyle=gr; ctx.fill();
+    ctx.beginPath(); ctx.arc(px,py,11,0,Math.PI*2);
+    ctx.strokeStyle=col; ctx.lineWidth=done?2.5:1.5; ctx.stroke();
+    // Nummer (ikke sidste punkt hvis det er lig første)
+    const isLast = i===pts.length-1 && Math.abs(p[0]-pts[0][0])<.01 && Math.abs(p[1]-pts[0][1])<.01;
+    if (!isLast) {
+      ctx.fillStyle=col; ctx.font=`bold 10px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(String(i+1),px,py);
+    }
+  });
+}
+
+function onDown(x,y) { sig.drawing=true; sig.path=[[x,y]]; }
+function onMove(x,y) {
+  if (!sig.drawing) return;
+  sig.path.push([x,y]);
+  const cv=sig.canvas;
+  const w=cv.width/(window.devicePixelRatio||1);
+  const h=cv.height/(window.devicePixelRatio||1);
+  const target=sig.pts[sig.wp];
+  if (target) {
+    const dist=Math.hypot(x-target[0]*w, y-target[1]*h);
+    if (dist < w*0.13) {
+      sig.wp++;
+      if (sig.wp >= sig.pts.length) { sig.drawing=false; setTimeout(sigilDone,200); return; }
+    }
+  }
+  drawSigil();
+}
+function onUp() { sig.drawing=false; }
+
+function sigilDone() {
+  // Succes-animation
+  const card = document.getElementById('encounter-card');
+  const res  = document.getElementById('ec-result');
+  res.textContent = `✦ ${activeVaesen.navn} er bundet! ✦`;
+  res.style.color = '#c9a227';
+  card.style.animation = 'goldGlow .8s ease';
+  document.getElementById('flee-btn').style.display = 'none';
+  document.getElementById('ec-instruction').textContent = 'Amuletten er smedet!';
+  setTimeout(() => {
+    card.style.animation = '';
+    endEncounter(true);
+  }, 1800);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BESTIARIUM
+// ═══════════════════════════════════════════════════════════════
+function openBestiary() {
+  const total = Object.keys(gs.caught).length;
+  document.getElementById('bp-count').textContent =
+    `${total} af ${VAESNER.length} fundet · ${Object.values(gs.caught).reduce((s,c)=>s+c.count,0)} fanget`;
+
+  const content = document.getElementById('bp-content');
+  const empty   = document.getElementById('bp-empty');
+
+  if (!total) { empty.classList.remove('hidden'); content.classList.add('hidden'); }
+  else {
+    empty.classList.add('hidden');
+    content.classList.remove('hidden');
+    content.innerHTML = '';
+
+    // Grupper efter type
+    const types = { building:'Huse', water:'Vand', forest:'Skov' };
+    Object.entries(types).forEach(([type,label]) => {
+      const inType = VAESNER.filter(v=>v.type===type);
+      const section = document.createElement('div');
+      section.className = 'bp-section';
+      section.innerHTML = `<div class="bp-section-title">${label}</div><div class="bp-grid"></div>`;
+      const grid = section.querySelector('.bp-grid');
+      inType.forEach(v => {
+        const caught = gs.caught[v.id];
+        const div = document.createElement('div');
+        div.className = 'bp-amulet' + (caught ? '' : ' locked');
+        div.innerHTML = `
+          <div class="bp-amulet-art"><canvas width="80" height="80"></canvas></div>
+          <div class="bp-amulet-name">${v.navn}</div>
+          <div class="bp-amulet-count">${caught ? `×${caught.count} · ${caught.first}` : 'Ikke fundet'}</div>`;
+        // Tegn amulet
+        const cv = div.querySelector('canvas');
+        drawAmulet(cv, v, !!caught);
+        grid.appendChild(div);
+      });
+      content.appendChild(section);
+    });
+  }
+
+  document.getElementById('bestiary-panel').classList.remove('hidden');
+}
+
+function closeBestiary() {
+  document.getElementById('bestiary-panel').classList.add('hidden');
+}
+
+function drawAmulet(canvas, vaesen, unlocked) {
+  const ctx = canvas.getContext('2d');
+  const s = 80;
+  ctx.clearRect(0,0,s,s);
+
+  // Baggrund
+  const bg = ctx.createRadialGradient(40,40,5,40,40,38);
+  bg.addColorStop(0, unlocked ? '#180a20' : '#0a0508');
+  bg.addColorStop(1, '#030105');
+  ctx.beginPath(); ctx.arc(40,40,38,0,Math.PI*2);
+  ctx.fillStyle=bg; ctx.fill();
+
+  // Sigilsti
+  const col = unlocked ? vaesen.farve : '#2a1508';
+  const pts = vaesen.sigil.pts;
+  ctx.beginPath();
+  ctx.strokeStyle = col;
+  ctx.lineWidth = unlocked ? 1.5 : 1;
+  ctx.globalAlpha = unlocked ? .8 : .3;
+  pts.forEach((p,i) => {
+    const x=12+p[0]*56, y=12+p[1]*56;
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // Kant
+  ctx.beginPath(); ctx.arc(40,40,38,0,Math.PI*2);
+  ctx.strokeStyle = unlocked ? vaesen.farve : '#2a1508';
+  ctx.lineWidth = unlocked ? 2 : 1;
+  ctx.stroke();
+
+  // Glow hvis fanget
+  if (unlocked) {
+    const gl = ctx.createRadialGradient(40,40,20,40,40,40);
+    gl.addColorStop(0,'rgba(0,0,0,0)');
+    gl.addColorStop(.7,vaesen.glow.replace('.5','.15'));
+    gl.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(40,40,38,0,Math.PI*2);
+    ctx.fillStyle=gl; ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HJÆLPEFUNKTIONER
+// ═══════════════════════════════════════════════════════════════
+function showStatus(msg,duration=3000) {
+  const el=document.getElementById('status');
+  el.textContent=msg; el.style.display='block';
+  clearTimeout(el._t);
+  if (duration) el._t=setTimeout(()=>el.style.display='none',duration);
+}
+
+// Auto-start GPS hvis tidligere brugt
+if (localStorage.getItem('sagnkortet_gps')==='1') startTracking();
+document.getElementById('gps-btn').addEventListener('click', () => {
+  localStorage.setItem('sagnkortet_gps','1');
+});
 </script>
 
+<!--
+  UPLOAD TIL GITHUB PAGES:
+  1. github.com/GeoGearloes/Mit_kort
+  2. Klik kort.html → "..." → Delete file → Commit
+  3. Add file → Upload files → træk denne fil ind → Commit
+  4. Vent 1 min → https://geogearloes.github.io/Mit_kort/kort.html
+-->
 </body>
 </html>
